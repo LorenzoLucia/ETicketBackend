@@ -85,7 +85,7 @@ def edit_user():
     return firebase.put('/users/edit-user', body, params={"auth": token_id})
 
 
-@app.route('/users/add-zone', methods=['POST'])
+@app.route('/zones/add-zone', methods=['POST'])
 def add_zone():
     token_id = get_token(request.headers)
 
@@ -94,7 +94,7 @@ def add_zone():
     return firebase.post('/zones/add-zone', body, params={"auth": token_id})
 
 
-@app.route('/users/remove-zone', methods=['POST'])
+@app.route('/zones/remove-zone', methods=['POST'])
 def remove_zone():
     token_id = get_token(request.headers)
 
@@ -103,7 +103,7 @@ def remove_zone():
     return firebase.post('/zones/remove-zone', body, params={"auth": token_id})
 
 
-@app.route('/users/edit-zone', methods=['PUT'])
+@app.route('/zones/edit-zone', methods=['PUT'])
 def edit_zone():
     token_id = get_token(request.headers)
 
@@ -112,7 +112,7 @@ def edit_zone():
     return firebase.put('/zones/edit-zone', body, params={"auth": token_id})
 
 
-@app.route('/users/register', methods=['POST'])
+@app.route('/register', methods=['POST'])
 def add_zone():
     token_id = get_token(request.headers)
 
