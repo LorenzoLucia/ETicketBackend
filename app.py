@@ -1,16 +1,21 @@
-import os
-
+import firebase_admin
 from dotenv import load_dotenv
 from firebase import firebase
+from firebase_admin import firestore, credentials
 from flask import Flask, request, abort
 
+# Application Default credentials are automatically created.
+cred = credentials.Certificate('path/to/serviceAccount.json')
+firestore_app = firebase_admin.initialize_app()
+db = firestore.client()
+
 load_dotenv()
-
-# TODO: Add firebase url
-FIREBASE_URL = os.getenv('FIREBASE_URL')
-
-# TODO: Add authentication
-firebase = firebase.FirebaseApplication(FIREBASE_URL, None)
+#
+# # TODO: Add firebase url
+# FIREBASE_URL = os.getenv('FIREBASE_URL')
+#
+# # TODO: Add authentication
+# firebase = firebase.FirebaseApplication(FIREBASE_URL, None)
 
 app = Flask(__name__)
 

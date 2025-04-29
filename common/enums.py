@@ -1,0 +1,13 @@
+from enum import Enum
+
+
+class Role(Enum):
+    CUSTOMER = "CUSTOMER"
+    SYSTEM_ADMINISTRATOR = "SYSTEM_ADMINISTRATOR"
+    CONTROLLER = "CONTROLLER"
+    SERVICE_ADMINISTRATOR = "SERVICE_ADMINISTRATOR"
+
+
+class PaymentType(Enum):
+    CARD = "CARD"
+    PAYPAL = "PAYPAL"
