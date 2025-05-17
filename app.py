@@ -138,6 +138,22 @@ def add_zone():
     return db.collection('zones').document(uuid4).get()
 
 
+@app.route('/users/<user_id>/plates', methods=['POST'])
+def add_plate(user_id: str):
+    token_id = get_token(request.headers)
+    firebase_user = get_firebase_user(token_id)
+    user = db.collection('users').document(user_id).get().to_dict()
+    if firebase_user.email != user["email"]:
+        abort(401)
+
+    body = request.json
+
+    uuid4 = str(uuid.uuid4())
+    db.collection('plates').document(uuid4).set({"user_id": user_id, **body})
+
+    return db.collection('plates').document(uuid4).get()
+
+
 @app.route('/zones/<zone_id>', methods=['DELETE'])
 def remove_zone(zone_id: str):
     token_id = get_token(request.headers)
