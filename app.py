@@ -21,10 +21,6 @@ firestore_app = firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 app = Flask(__name__)
-app.config["API_TITLE"] = "Library API"
-app.config["API_VERSION"] = "v0.0.1"
-app.config["OPENAPI_VERSION"] = "3.1.0"
-app.config["OPENAPI_DESCRIPTION"] = "A simple library API"
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
