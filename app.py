@@ -3,8 +3,11 @@ import os
 import firebase_admin
 from dotenv import load_dotenv
 from firebase_admin import firestore, credentials, auth
-from flask import Flask, request, abort
+from flask import Flask, abort, request
 from flask_cors import CORS
+
+from common.enums import Role
+from models.user import User
 
 load_dotenv()
 
@@ -14,13 +17,6 @@ firestore_account_path = os.getenv('FIRESTORE_ACCOUNT_PATH')
 cred = credentials.Certificate(firestore_account_path)
 firestore_app = firebase_admin.initialize_app(cred)
 db = firestore.client()
-
-#
-# # TODO: Add firebase url
-# FIREBASE_URL = os.getenv('FIREBASE_URL')
-#
-# # TODO: Add authentication
-# firebase = firebase.FirebaseApplication(FIREBASE_URL, None)
 
 app = Flask(__name__)
 
@@ -143,14 +139,33 @@ def get_token(headers):
 
 @app.route('/get-me', methods=['GET'])
 def get_me():
-    #token_id = get_token(request.headers)
-    #user = get_firebase_user(token_id)
-    # doc_ref = db.collection("users").document("alovelace")
-    # doc_ref.set({"first": "Ada", "last": "Lovelace", "born": 1815})
-    return "user"
+    token_id = get_token(request.headers)
+    firebase_user = get_firebase_user(token_id)
+    email = firebase_user.email
+    query = db.collection("users").where("email", "==", email)
+    result = query.get()
+    if len(result) == 0:
+        return {
+            "is_registered": False,
+            "user_data": {}
+        }
+    user = query.get()[0]
+    return user.to_dict()
+
+
+@app.route('/register-user', methods=['POST'])
+def register_user():
+    body = request.json
+    token_id = get_token(request.headers)
+    firebase_user = get_firebase_user(token_id)
+    email = firebase_user.email
+    user = User(name=body["name"], surname=body["surname"], email=email, role=Role.CUSTOMER)
+    db.collection("users").document(user.id).set(user.to_dict())
+    return {
+        "id": user.id,
+        **user.to_dict()
+    }
 
 
 if __name__ == '__main__':
     app.run()
-
-
