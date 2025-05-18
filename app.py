@@ -196,14 +196,14 @@ def get_me():
 
 
 @app.route('/register', methods=['POST'])
-@cross_origin(origins="*", allow_headers=["Content-Type"])
+@cross_origin()
 def register_user():
     body = request.json
     token_id = get_token(request.headers)
     firebase_user = get_firebase_user(token_id)
     email = firebase_user.email
     user = User(name=body["name"], surname=body["surname"], email=email, role=Role.CUSTOMER)
-    return db.collection("users").document(user.id).get()
+    return db.collection("users").document(user.id).get().to_dict()
 
 
 if __name__ == '__main__':
