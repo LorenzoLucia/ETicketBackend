@@ -203,7 +203,8 @@ def register_user():
     firebase_user = get_firebase_user(token_id)
     email = firebase_user.email
     user = User(name=body["name"], surname=body["surname"], email=email, role=Role.CUSTOMER)
-    return db.collection("users").document(user.id).get().to_dict()
+    db.collection("users").document(user.id).set(user.to_dict())
+    return user.to_dict()
 
 
 if __name__ == '__main__':
