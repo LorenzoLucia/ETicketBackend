@@ -195,7 +195,7 @@ def get_me():
     return result[0].to_dict()
 
 
-@app.route('/register-user', methods=['POST'])
+@app.route('/register', methods=['POST'])
 @cross_origin(allow_headers=["Content-Type"])
 def register_user():
     body = request.json
