@@ -5,7 +5,7 @@ import firebase_admin
 from dotenv import load_dotenv
 from firebase_admin import firestore, credentials, auth
 from firebase_admin.auth import UserNotFoundError
-from flask import Flask, abort, request
+from flask import Flask, abort, request, Blueprint
 from flask_cors import CORS, cross_origin
 
 from common.enums import Role
@@ -20,9 +20,9 @@ cred = credentials.Certificate(firestore_account_path)
 firestore_app = firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-app = Flask(__name__)
-cors = CORS(app)
-app.config['CORS_HEADERS'] = 'Content-Type'
+app = Blueprint("API_v1", __name__)
+CORS(app)
+#app.config['CORS_HEADERS'] = 'Content-Type'
 
 
 def get_firebase_user(token_id):
