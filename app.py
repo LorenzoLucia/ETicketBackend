@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from firebase_admin import firestore, credentials, auth
 from firebase_admin.auth import UserNotFoundError
 from flask import Flask, abort, request
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 
 from common.enums import Role
 from models.user import User
@@ -124,6 +124,7 @@ def get_plates(user_id: str):
 #
 #
 @app.route('/zones', methods=['POST'])
+@cross_origin(allow_headers=["Content-Type"])
 def add_zone():
     token_id = get_token(request.headers)
 
@@ -139,6 +140,7 @@ def add_zone():
 
 
 @app.route('/users/<user_id>/plates', methods=['POST'])
+@cross_origin(allow_headers=["Content-Type"])
 def add_plate(user_id: str):
     token_id = get_token(request.headers)
     firebase_user = get_firebase_user(token_id)
@@ -194,6 +196,7 @@ def get_me():
 
 
 @app.route('/register-user', methods=['POST'])
+@cross_origin(allow_headers=["Content-Type"])
 def register_user():
     body = request.json
     token_id = get_token(request.headers)
