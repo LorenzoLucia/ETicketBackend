@@ -39,7 +39,7 @@ def get_token(headers):
 
     if token_id is None:
         abort(401)
-    print(token_id)
+
     return token_id
 
 
@@ -249,7 +249,7 @@ def get_me():
             "is_registered": False,
             "user_data": {}
         }
-    return result[0].to_dict()
+    return {"is_registered": True, "user_data": result[0].to_dict()}
 
 
 @app.route('/register', methods=['POST'])
