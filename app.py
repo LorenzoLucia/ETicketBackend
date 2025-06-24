@@ -1,5 +1,4 @@
 import os
-import uuid
 
 import firebase_admin
 from dotenv import load_dotenv
@@ -9,13 +8,16 @@ from flask import Flask, abort, request
 from flask_cors import CORS, cross_origin
 
 from common.enums import Role
-from models.user import User
+from services.payment_methods import get_user_payment_methods, delete_payment_method
+from services.plates import get_user_plates, add_user_plate, delete_plate
+from services.tickets import get_user_tickets
+from services.users import get_all_users, delete_user, register_new_user, get_myself
+from services.zones import get_all_zones, add_new_zone, delete_zone
 
 load_dotenv()
 
 firestore_account_path = os.getenv('FIRESTORE_ACCOUNT_PATH')
 
-# Application Default credentials are automatically created.
 cred = credentials.Certificate(firestore_account_path)
 firestore_app = firebase_admin.initialize_app(cred)
 db = firestore.client()
@@ -62,10 +64,10 @@ def add_payment_method(user_id: str):
         return abort(401)
 
     body = request.json()
-    uuid4 = str(uuid.uuid4())
-    method_ref = db.collection("payment-methods").document(uuid4)
-    method_ref.set(body)
-    return method_ref.get().to_dict()
+    return add_payment_method(user_id,
+                              body["card_number"],
+                              body["cvc"],
+                              body["expiry"])
 
 
 @app.route('/users/<user_id>/payment-methods', methods=['GET'])
@@ -73,20 +75,16 @@ def get_payment_methods(user_id: str):
     token_id = get_token(request.headers)
     if not is_user_authenticated(user_id, token_id):
         return abort(401)
-
-    user_payment_methods = db.collection('payment-methods').where("user", "==", user_id).get()
-    return [i.to_dict() for i in user_payment_methods]
+    return get_user_payment_methods(db, user_id)
 
 
 @app.route('/users/<user_id>/payment-methods/<payment_method_id>', methods=['DELETE'])
 def remove_payment_method(user_id: str, payment_method_id: str):
     token_id = get_token(request.headers)
-    method_ref = db.collection('payment-methods').document(payment_method_id)
-    payment_method = method_ref.get().to_dict()
-    if not is_user_authenticated(user_id, token_id) or payment_method["user_id"] != user_id:
+    if not is_user_authenticated(user_id, token_id):
         return abort(401)
 
-    method_ref.delete()
+    delete_payment_method(db, user_id, payment_method_id)
     return True
 
 
@@ -96,8 +94,7 @@ def get_tickets(user_id: str):
     if not is_user_authenticated(user_id, token_id):
         return abort(401)
 
-    user_tickets = db.collection('tickets').where("user", "==", user_id).get()
-    return [i.to_dict() for i in user_tickets]
+    return get_user_tickets(db, user_id)
 
 
 @app.route('/users/<user_id>/tickets', methods=['POST'])
@@ -107,10 +104,14 @@ def add_ticket(user_id: str):
         return abort(401)
 
     body = request.json()
-    uuid4 = str(uuid.uuid4())
-    ticket_ref = db.collection("tickets").document(uuid4)
-    ticket_ref.set(body)
-    return ticket_ref.get().to_dict()
+    return add_ticket(db,
+                      user_id,
+                      body["plate_id"],
+                      body["zone_id"],
+                      body["payment_method_id"],
+                      body["start_time"],
+                      body["end_time"],
+                      body["price"])
 
 
 @app.route('/users', methods=['GET'])
@@ -120,27 +121,26 @@ def get_users():
     if user["role"] != Role.SYSTEM_ADMINISTRATOR.value or user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
         return abort(401)
 
-    users = db.collection('users').get()
-    return [i.to_dict() for i in users]
+    return get_all_users(db)
 
-
-@app.route('/users/<user_id>', methods=['PUT'])
-def edit_user(user_id: str):
-    token_id = get_token(request.headers)
-
-    user = get_db_user_from_auth(get_firebase_user(token_id))
-    user_to_edit_ref = db.collection("users").document(user_id)
-    user_to_edit = user_to_edit_ref.get().to_dict()
-    if user["role"] != Role.SYSTEM_ADMINISTRATOR.value or user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
-        return abort(401)
-    # You cannot edit via APIs SYSTEM and SERVICE ADMINISTRATORS
-    if user_to_edit["role"] == Role.SYSTEM_ADMINISTRATOR.value or user_to_edit[
-        "role"] == Role.CUSTOMER_ADMINISTRATOR.value:
-        abort(401)
-
-    body = request.json
-    user_to_edit_ref.set(body)
-    return user_to_edit_ref.get().to_dict()
+#
+# @app.route('/users/<user_id>', methods=['PUT'])
+# def edit_user(user_id: str):
+#     token_id = get_token(request.headers)
+#
+#     user = get_db_user_from_auth(get_firebase_user(token_id))
+#     user_to_edit_ref = db.collection("users").document(user_id)
+#     user_to_edit = user_to_edit_ref.get().to_dict()
+#     if user["role"] != Role.SYSTEM_ADMINISTRATOR.value or user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
+#         return abort(401)
+#     # You cannot edit via APIs SYSTEM and SERVICE ADMINISTRATORS
+#     if user_to_edit["role"] == Role.SYSTEM_ADMINISTRATOR.value or user_to_edit[
+#         "role"] == Role.CUSTOMER_ADMINISTRATOR.value:
+#         abort(401)
+#
+#     body = request.json
+#     user_to_edit_ref.set(body)
+#     return user_to_edit_ref.get().to_dict()
 
 
 @app.route('/users/<user_id>', methods=['DELETE'])
@@ -148,16 +148,11 @@ def remove_user(user_id: str):
     token_id = get_token(request.headers)
 
     user = get_db_user_from_auth(get_firebase_user(token_id))
-    user_to_delete_ref = db.collection("users").document(user_id)
-    user_to_delete = user_to_delete_ref.get().to_dict()
+
     if user["role"] != Role.SYSTEM_ADMINISTRATOR.value or user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
         return abort(401)
-    # You cannot delete via APIs SYSTEM and SERVICE ADMINISTRATORS
-    if user_to_delete["role"] == Role.SYSTEM_ADMINISTRATOR.value or user_to_delete[
-        "role"] == Role.CUSTOMER_ADMINISTRATOR.value:
-        abort(401)
 
-    user_to_delete_ref.delete()
+    delete_user(db, user_id)
     return True
 
 
@@ -167,8 +162,7 @@ def get_plates(user_id: str):
     if not is_user_authenticated(user_id, token_id):
         return abort(401)
 
-    user_plates = db.collection('plates').where("user", "==", user_id).get()
-    return [i.to_dict() for i in user_plates]
+    return get_user_plates(db, user_id)
 
 
 @app.route('/users/<user_id>/plates', methods=['POST'])
@@ -180,21 +174,17 @@ def add_plate(user_id: str):
 
     body = request.json
 
-    uuid4 = str(uuid.uuid4())
-    db.collection('plates').document(uuid4).set({"user_id": user_id, **body})
-
-    return db.collection('plates').document(uuid4).get()
+    return add_user_plate(db, user_id, body["number"])
 
 
 @app.route('/users/<user_id>/plates/<plate_id>', methods=['DELETE'])
 def remove_plate(user_id: str, plate_id: str):
     token_id = get_token(request.headers)
-    plate_ref = db.collection('plates').document(plate_id)
-    plate = plate_ref.get().to_dict()
-    if not is_user_authenticated(user_id, token_id) or plate["user_id"] != user_id:
+
+    if not is_user_authenticated(user_id, token_id):
         return abort(401)
 
-    plate_ref.delete()
+    delete_plate(db, user_id, plate_id)
     return True
 
 
@@ -203,8 +193,7 @@ def get_zones():
     token_id = get_token(request.headers)
     # This line is only needed to check that the user is authenticated
     _ = get_firebase_user(token_id)
-    result = db.collection('zones').get()
-    return [i.to_dict() for i in result]
+    return get_all_zones(db, )
 
 
 @app.route('/zones', methods=['POST'])
@@ -217,10 +206,7 @@ def add_zone():
         return abort(401)
     body = request.json
 
-    uuid4 = str(uuid.uuid4())
-    db.collection('zones').document(uuid4).set(body)
-
-    return db.collection('zones').document(uuid4).get()
+    return add_new_zone(db, body["name"], body["hour_price"])
 
 
 @app.route('/zones/<zone_id>', methods=['DELETE'])
@@ -231,7 +217,7 @@ def remove_zone(zone_id: str):
     if user["role"] != Role.SYSTEM_ADMINISTRATOR.value or user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
         return abort(401)
 
-    db.collection("zones").document(zone_id).delete()
+    delete_zone(db, zone_id)
     return True
 
 
@@ -252,15 +238,7 @@ def get_me():
     token_id = get_token(request.headers)
     firebase_user = get_firebase_user(token_id)
     email = firebase_user.email
-
-    result = db.collection("users").where("email", "==", email).get()
-
-    if len(result) == 0:
-        return {
-            "is_registered": False,
-            "user_data": {}
-        }
-    return {"is_registered": True, "user_data": result[0].to_dict()}
+    return get_myself(db, email)
 
 
 @app.route('/register', methods=['POST'])
@@ -270,9 +248,7 @@ def register_user():
     token_id = get_token(request.headers)
     firebase_user = get_firebase_user(token_id)
     email = firebase_user.email
-    user = User(name=body["name"], surname=body["surname"], email=email, role=Role.CUSTOMER)
-    db.collection("users").document(user.id).set(user.to_dict())
-    return user.to_dict()
+    return register_new_user(db, body["name"], body["surname"], email)
 
 
 if __name__ == '__main__':

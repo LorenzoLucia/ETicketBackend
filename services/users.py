@@ -1,0 +1,39 @@
+from firebase_admin import firestore
+from flask import abort
+
+from common.enums import Role
+from models.user import User
+
+
+
+def get_all_users(db):
+    users = db.collection('users').get()
+    return [i.to_dict() for i in users]
+
+
+def delete_user(db, user_id: str):
+    user_to_delete_ref = db.collection("users").document(user_id)
+    user_to_delete = user_to_delete_ref.get().to_dict()
+    # You cannot delete via APIs SYSTEM and SERVICE ADMINISTRATORS
+    if user_to_delete["role"] == Role.SYSTEM_ADMINISTRATOR.value or user_to_delete[
+        "role"] == Role.CUSTOMER_ADMINISTRATOR.value:
+        abort(401)
+
+    user_to_delete_ref.delete()
+
+
+def register_new_user(db, name, surname, email):
+    user = User(name=name, surname=surname, email=email, role=Role.CUSTOMER)
+    db.collection("users").document(user.id).set(user.to_dict())
+    return user.to_dict()
+
+
+def get_myself(db, email: str):
+    result = db.collection("users").where("email", "==", email).get()
+
+    if len(result) == 0:
+        return {
+            "is_registered": False,
+            "user_data": {}
+        }
+    return {"is_registered": True, "user_data": result[0].to_dict()}
