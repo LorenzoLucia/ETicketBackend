@@ -9,6 +9,7 @@ def get_plate(db, plate_id: str):
 
 def get_user_plates(db, user_id: str):
     user_plates = db.collection('plates').where("user", "==", user_id).get()
+    print([i.to_dict() for i in user_plates])
     return [i.to_dict() for i in user_plates]
 
 

@@ -238,7 +238,7 @@ def get_me():
     token_id = get_token(request.headers)
     firebase_user = get_firebase_user(token_id)
     email = firebase_user.email
-    return get_myself(db, email)
+    return get_myself(db, email, token_id)
 
 
 @app.route('/register', methods=['POST'])
@@ -248,7 +248,7 @@ def register_user():
     token_id = get_token(request.headers)
     firebase_user = get_firebase_user(token_id)
     email = firebase_user.email
-    return register_new_user(db, body["name"], body["surname"], email)
+    return register_new_user(db, body["name"], body["surname"], email, token_id)
 
 
 if __name__ == '__main__':
