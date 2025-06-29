@@ -8,9 +8,9 @@ def get_plate(db, plate_id: str):
 
 
 def get_user_plates(db, user_id: str):
-    user_plates = db.collection('plates').where("user", "==", user_id).get()
-    print([i.to_dict() for i in user_plates])
-    return [i.to_dict() for i in user_plates]
+    user_plates = db.collection('plates').where("user_id", "==", user_id).get()
+    
+    return [i.to_dict()['number'] for i in user_plates]
 
 
 def add_user_plate(db, user_id: str, number: str):
@@ -19,7 +19,7 @@ def add_user_plate(db, user_id: str, number: str):
         "user_id": user_id,
         "number": number})
 
-    return db.collection('plates').document(uuid4).get()
+    return db.collection('plates').document(uuid4).get().to_dict()
 
 
 def delete_plate(db, user_id: str, plate_id: str):

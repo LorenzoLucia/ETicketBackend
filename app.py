@@ -8,11 +8,12 @@ from flask import Flask, abort, request
 from flask_cors import CORS, cross_origin
 
 from common.enums import Role
-from services.payment_methods import get_user_payment_methods, delete_payment_method
+from services.payment_methods import get_user_payment_methods, delete_payment_method, add_payment_methods
 from services.plates import get_user_plates, add_user_plate, delete_plate
-from services.tickets import get_user_tickets
+from services.tickets import get_user_tickets, add_ticket, extend_ticket
 from services.users import get_all_users, delete_user, register_new_user, get_myself
 from services.zones import get_all_zones, add_new_zone, delete_zone
+from datetime import datetime, timedelta, timezone
 
 load_dotenv()
 
@@ -58,13 +59,15 @@ def get_db_user_from_auth(firebase_user):
 
 
 @app.route('/users/<user_id>/payment-methods', methods=['POST'])
+@cross_origin()
 def add_payment_method(user_id: str):
     token_id = get_token(request.headers)
     if not is_user_authenticated(user_id, token_id):
         return abort(401)
 
-    body = request.json()
-    return add_payment_method(user_id,
+    body = request.json
+    return add_payment_methods(db,
+                              user_id,
                               body["card_number"],
                               body["cvc"],
                               body["expiry"])
@@ -97,21 +100,21 @@ def get_tickets(user_id: str):
     return get_user_tickets(db, user_id)
 
 
-@app.route('/users/<user_id>/tickets', methods=['POST'])
-def add_ticket(user_id: str):
-    token_id = get_token(request.headers)
-    if not is_user_authenticated(user_id, token_id):
-        return abort(401)
+# @app.route('/users/<user_id>/tickets', methods=['POST'])
+# def add_ticket(user_id: str):
+#     token_id = get_token(request.headers)
+#     if not is_user_authenticated(user_id, token_id):
+#         return abort(401)
 
-    body = request.json()
-    return add_ticket(db,
-                      user_id,
-                      body["plate_id"],
-                      body["zone_id"],
-                      body["payment_method_id"],
-                      body["start_time"],
-                      body["end_time"],
-                      body["price"])
+#     body = request.json()
+#     return add_ticket(db,
+#                       user_id,
+#                       body["plate_id"],
+#                       body["zone_id"],
+#                       body["payment_method_id"],
+#                       body["start_time"],
+#                       body["end_time"],
+#                       body["price"])
 
 
 @app.route('/users', methods=['GET'])
@@ -174,7 +177,7 @@ def add_plate(user_id: str):
 
     body = request.json
 
-    return add_user_plate(db, user_id, body["number"])
+    return add_user_plate(db, user_id, body["plate"])
 
 
 @app.route('/users/<user_id>/plates/<plate_id>', methods=['DELETE'])
@@ -250,6 +253,34 @@ def register_user():
     email = firebase_user.email
     return register_new_user(db, body["name"], body["surname"], email, token_id)
 
+@app.route('/users/<user_id>/pay', methods=['POST'])
+@cross_origin()
+def pay(user_id: str):
+    token_id = get_token(request.headers)
+
+    if not is_user_authenticated(user_id, token_id):
+        return abort(401)
+    
+    body = request.json
+
+    if body['ticket_id'] is not None:
+        return extend_ticket(db, body['ticket_id'], int(body['duration']), body['amount'])
+
+    zone_id = db.collection("zones").where("name", "==", body['zone']).get()[0].id
+    if not zone_id:
+        return abort(404, description="Zone not found")
+    plate_id = db.collection("plates").where("number", "==", body['plate']).where("user_id", "==", user_id).get()[0].id
+    if not plate_id:
+        return abort(404, description="Plate not found")
+    
+    
+
+    start_time = datetime.now(timezone.utc)
+    end_time = start_time + timedelta(minutes=int(body['duration']) * 30)
+    end_time.astimezone(timezone.utc)
+    
+    # print(f"Adding ticket for user {user_id}, plate {plate_id}, zone {zone_id}, payment method {body['payment_method_id']}, start time {start_time}, end time {end_time}, amount {body['amount']}")
+    return add_ticket(db, user_id, plate_id, zone_id, body['payment_method_id'], start_time, end_time, float(body['amount']))
 
 if __name__ == '__main__':
     app.run(port=5001)
