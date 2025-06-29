@@ -88,7 +88,7 @@ def remove_payment_method(user_id: str, payment_method_id: str):
         return abort(401)
 
     delete_payment_method(db, user_id, payment_method_id)
-    return True
+    return ''
 
 
 @app.route('/users/<user_id>/tickets', methods=['GET'])
@@ -180,15 +180,15 @@ def add_plate(user_id: str):
     return add_user_plate(db, user_id, body["plate"])
 
 
-@app.route('/users/<user_id>/plates/<plate_id>', methods=['DELETE'])
-def remove_plate(user_id: str, plate_id: str):
+@app.route('/users/<user_id>/plates/<number>', methods=['DELETE'])
+def remove_plate(user_id: str, number: str):
     token_id = get_token(request.headers)
 
     if not is_user_authenticated(user_id, token_id):
         return abort(401)
 
-    delete_plate(db, user_id, plate_id)
-    return True
+    delete_plate(db, user_id, number)
+    return ''
 
 
 @app.route('/zones', methods=['GET'])
@@ -241,7 +241,7 @@ def get_me():
     token_id = get_token(request.headers)
     firebase_user = get_firebase_user(token_id)
     email = firebase_user.email
-    return get_myself(db, email, token_id)
+    return get_myself(db, email)
 
 
 @app.route('/register', methods=['POST'])
@@ -251,7 +251,7 @@ def register_user():
     token_id = get_token(request.headers)
     firebase_user = get_firebase_user(token_id)
     email = firebase_user.email
-    return register_new_user(db, body["name"], body["surname"], email, token_id)
+    return register_new_user(db, body["name"], body["surname"], email, body['birthdate'])
 
 @app.route('/users/<user_id>/pay', methods=['POST'])
 @cross_origin()
@@ -262,8 +262,7 @@ def pay(user_id: str):
         return abort(401)
     
     body = request.json
-
-    if body['ticket_id'] is not None:
+    if len(body['ticket_id']) > 0:
         return extend_ticket(db, body['ticket_id'], int(body['duration']), body['amount'])
 
     zone_id = db.collection("zones").where("name", "==", body['zone']).get()[0].id

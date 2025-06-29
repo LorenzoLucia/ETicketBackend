@@ -22,23 +22,19 @@ def delete_user(db, user_id: str):
     user_to_delete_ref.delete()
 
 
-def register_new_user(db, name, surname, email, token_id):
-    decoded_token = auth.verify_id_token(token_id)
-    uid = decoded_token['uid']
-    user = User(name=name, surname=surname, email=email, role=Role.CUSTOMER)
-    # db.collection("users").document(user.id).set(user.to_dict())
-    db.collection("users").document(uid).set(user.to_dict())
+def register_new_user(db, name, surname, email, birth_date):
+    
+    user = User(name=name, surname=surname, email=email, role=Role.CUSTOMER, birth_date=birth_date)
+    db.collection("users").document(user.id).set(user.to_dict())
     return user.to_dict()
 
 
-def get_myself(db, email: str, token_id: str):
+def get_myself(db, email: str):
     result = db.collection("users").where("email", "==", email).get()
-    decoded_token = auth.verify_id_token(token_id)
-    uid = decoded_token['uid']
 
     if len(result) == 0:
         return {
             "is_registered": False,
             "user_data": {}
         }
-    return {"is_registered": True, "user_data": result[0].to_dict(), "user_id": uid}
+    return {"is_registered": True, "user_data": result[0].to_dict(), "user_id": result[0].id}
