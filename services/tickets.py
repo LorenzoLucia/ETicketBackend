@@ -1,5 +1,7 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+
+import pytz
 
 from services.payment_methods import get_payment_method
 from services.plates import get_plate
@@ -15,7 +17,11 @@ def get_user_tickets(db, user_id: str):
         zone = get_zone(db, i["zone_id"])
         plate = get_plate(db, i["plate_id"])
         payment_method = get_payment_method(db, i["payment_method_id"])
-        is_active = i["end_time"] > datetime.now(timezone.utc)
+
+        current_time = datetime.now(pytz.timezone("Europe/Rome"))
+        if (current_time - timedelta(days=30)) > i["end_time"]: continue
+
+        is_active = i["end_time"] > current_time
         # print(is_active)
         tickets.append({
             "zone": zone,
@@ -46,18 +52,19 @@ def add_ticket(db, user_id: str, plate_id: str, zone_id: str, payment_method_id:
     })
     return ticket_ref.get().to_dict()
 
+
 def extend_ticket(db, ticket_id: str, duration: int, amount: float):
     ticket_ref = db.collection("tickets").document(ticket_id)
     ticket = ticket_ref.get().to_dict()
-    
+
     if not ticket:
         return None
-    
+
     new_end_time = ticket["end_time"] + timedelta(minutes=duration * 30)
-    
+
     ticket_ref.update({
         "end_time": new_end_time,
         "price": str(float(ticket["price"]) + float(amount))
     })
-    
+
     return ticket_ref.get().to_dict()
