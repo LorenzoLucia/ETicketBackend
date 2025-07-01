@@ -227,7 +227,7 @@ def add_zone():
         return abort(401)
     body = request.json
 
-    return add_new_zone(db, body["name"], body["hour_price"])
+    return add_new_zone(db, body["name"], body["price"])
 
 
 @app.route('/zones/<zone_id>', methods=['DELETE'])
@@ -244,12 +244,16 @@ def remove_zone(zone_id: str):
 
 #
 # @app.route('/zones/<zone_id>', methods=['PUT'])
-# def edit_zone(zone_id: int):
+# def edit_zone(zone_id: str):
 #     token_id = get_token(request.headers)
-#
+
+#     user = get_db_user_from_auth(get_firebase_user(token_id))
+#     if user["role"] != Role.SYSTEM_ADMINISTRATOR.value and user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
+#         return abort(401)
+    
 #     body = request.json
-#
-#     return firebase.put('/zones/edit-zone', body, params={"auth": token_id})
+
+#     return edit_zone(db, zone_id, body["name"], body["price"])
 #
 #
 
