@@ -123,30 +123,31 @@ def get_tickets(user_id: str):
 def get_users():
     token_id = get_token(request.headers)
     user = get_db_user_from_auth(get_firebase_user(token_id))
-    if user["role"] != Role.SYSTEM_ADMINISTRATOR.value or user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
+    if user["role"] != Role.SYSTEM_ADMINISTRATOR.value and user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
         return abort(401)
 
     return get_all_users(db)
 
 
-#
-# @app.route('/users/<user_id>', methods=['PUT'])
-# def edit_user(user_id: str):
-#     token_id = get_token(request.headers)
-#
-#     user = get_db_user_from_auth(get_firebase_user(token_id))
-#     user_to_edit_ref = db.collection("users").document(user_id)
-#     user_to_edit = user_to_edit_ref.get().to_dict()
-#     if user["role"] != Role.SYSTEM_ADMINISTRATOR.value or user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
-#         return abort(401)
-#     # You cannot edit via APIs SYSTEM and SERVICE ADMINISTRATORS
-#     if user_to_edit["role"] == Role.SYSTEM_ADMINISTRATOR.value or user_to_edit[
-#         "role"] == Role.CUSTOMER_ADMINISTRATOR.value:
-#         abort(401)
-#
-#     body = request.json
-#     user_to_edit_ref.set(body)
-#     return user_to_edit_ref.get().to_dict()
+
+@app.route('/users/<user_id>', methods=['PUT'])
+def edit_user(user_id: str):
+    token_id = get_token(request.headers)
+
+    user = get_db_user_from_auth(get_firebase_user(token_id))
+    user_to_edit_ref = db.collection("users").document(user_id)
+    user_to_edit = user_to_edit_ref.get().to_dict()
+    if user["role"] != Role.SYSTEM_ADMINISTRATOR.value and user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
+        return abort(401)
+    # You cannot edit via APIs SYSTEM and SERVICE ADMINISTRATORS
+    if user_to_edit["role"] == Role.SYSTEM_ADMINISTRATOR.value or user_to_edit[
+        "role"] == Role.CUSTOMER_ADMINISTRATOR.value:
+        abort(401)
+
+    body = request.json
+    user_to_edit["role"] = body["role"]
+    user_to_edit_ref.set(user_to_edit)
+    return user_to_edit_ref.get().to_dict()
 
 
 @app.route('/users/<user_id>', methods=['DELETE'])
@@ -155,7 +156,7 @@ def remove_user(user_id: str):
 
     user = get_db_user_from_auth(get_firebase_user(token_id))
 
-    if user["role"] != Role.SYSTEM_ADMINISTRATOR.value or user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
+    if user["role"] != Role.SYSTEM_ADMINISTRATOR.value and user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
         return abort(401)
 
     delete_user(db, user_id)
@@ -208,7 +209,7 @@ def add_zone():
     token_id = get_token(request.headers)
 
     user = get_db_user_from_auth(get_firebase_user(token_id))
-    if user["role"] != Role.SYSTEM_ADMINISTRATOR.value or user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
+    if user["role"] != Role.SYSTEM_ADMINISTRATOR.value and user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
         return abort(401)
     body = request.json
 
@@ -220,7 +221,7 @@ def remove_zone(zone_id: str):
     token_id = get_token(request.headers)
 
     user = get_db_user_from_auth(get_firebase_user(token_id))
-    if user["role"] != Role.SYSTEM_ADMINISTRATOR.value or user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
+    if user["role"] != Role.SYSTEM_ADMINISTRATOR.value and user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
         return abort(401)
 
     delete_zone(db, zone_id)

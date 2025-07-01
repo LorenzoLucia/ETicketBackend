@@ -9,7 +9,11 @@ from models.user import User
 
 def get_all_users(db):
     users = db.collection('users').get()
-    return [i.to_dict() for i in users]
+    users_dicts = [i.to_dict() for i in users]
+    users_ids = [i.id for i in users]
+    for i in range(len(users_dicts)):
+        users_dicts[i]['id'] = users_ids[i]
+    return users_dicts
 
 
 def delete_user(db, user_id: str):
