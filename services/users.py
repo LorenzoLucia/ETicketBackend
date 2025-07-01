@@ -1,9 +1,11 @@
 from firebase_admin import firestore, auth
 from flask import abort
 from google.cloud.firestore_v1 import FieldFilter
+from datetime import datetime, timezone
 
 from common.enums import Role
 from models.user import User
+from pytz import timezone
 
 
 
@@ -27,9 +29,8 @@ def delete_user(db, user_id: str):
     user_to_delete_ref.delete()
 
 
-def register_new_user(db, name, surname, email, birth_date):
-    
-    user = User(name=name, surname=surname, email=email, role=Role.CUSTOMER, birth_date=birth_date)
+def register_new_user(db, name, surname, email, birth_date=datetime.now(timezone('Europe/Rome')), role=Role.CUSTOMER):
+    user = User(name=name, surname=surname, email=email, role=role, birth_date=birth_date)
     db.collection("users").document(user.id).set(user.to_dict())
     return user.to_dict()
 

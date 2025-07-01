@@ -150,6 +150,20 @@ def edit_user(user_id: str):
     return user_to_edit_ref.get().to_dict()
 
 
+@app.route('/users', methods=['POST'])
+@cross_origin()
+def add_user():
+    token_id = get_token(request.headers)
+
+    user = get_db_user_from_auth(get_firebase_user(token_id))
+    if user["role"] != Role.SYSTEM_ADMINISTRATOR.value and user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
+        return abort(401)
+
+    body = request.json
+
+    return register_new_user(db, body["name"], body["surname"], body["email"], role=body["role"],)
+
+
 @app.route('/users/<user_id>', methods=['DELETE'])
 def remove_user(user_id: str):
     token_id = get_token(request.headers)

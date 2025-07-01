@@ -18,6 +18,6 @@ class User:
             'name': self.name,
             'surname': self.surname,
             'email': self.email,
-            'role': self.role.name,
+            'role': self.role if isinstance(self.role, str) else self.role.name,
             'birth_date': self.birth_date,
         }
