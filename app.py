@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timedelta, timezone
 
 import firebase_admin
 from dotenv import load_dotenv
@@ -14,7 +15,6 @@ from services.plates import get_user_plates, add_user_plate, delete_plate
 from services.tickets import get_user_tickets, add_ticket, extend_ticket
 from services.users import get_all_users, delete_user, register_new_user, get_myself
 from services.zones import get_all_zones, add_new_zone, delete_zone
-from datetime import datetime, timedelta, timezone
 
 load_dotenv()
 
@@ -68,10 +68,11 @@ def add_payment_method(user_id: str):
 
     body = request.json
     return add_payment_methods(db,
-                              user_id,
-                              body["card_number"],
-                              body["cvc"],
-                              body["expiry"])
+                               user_id,
+                               body["card_number"],
+                               body["cvc"],
+                               body["expiry"],
+                               body["owner_name"])
 
 
 @app.route('/users/<user_id>/payment-methods', methods=['GET'])
@@ -126,6 +127,7 @@ def get_users():
         return abort(401)
 
     return get_all_users(db)
+
 
 #
 # @app.route('/users/<user_id>', methods=['PUT'])
@@ -254,6 +256,7 @@ def register_user():
     email = firebase_user.email
     return register_new_user(db, body["name"], body["surname"], email, body['birthdate'])
 
+
 @app.route('/users/<user_id>/pay', methods=['POST'])
 @cross_origin()
 def pay(user_id: str):
@@ -261,7 +264,7 @@ def pay(user_id: str):
 
     if not is_user_authenticated(user_id, token_id):
         return abort(401)
-    
+
     body = request.json
     if len(body['ticket_id']) > 0:
         return extend_ticket(db, body['ticket_id'], int(body['duration']), body['amount'])
@@ -269,18 +272,19 @@ def pay(user_id: str):
     zone_id = db.collection("zones").where(filter=FieldFilter("name", "==", body['zone'])).get()[0].id
     if not zone_id:
         return abort(404, description="Zone not found")
-    plate_id = db.collection("plates").where(filter=FieldFilter("number", "==", body['plate'])).where(filter=FieldFilter("user_id", "==", user_id)).get()[0].id
+    plate_id = db.collection("plates").where(filter=FieldFilter("number", "==", body['plate'])).where(
+        filter=FieldFilter("user_id", "==", user_id)).get()[0].id
     if not plate_id:
         return abort(404, description="Plate not found")
-    
-    
 
     start_time = datetime.now(timezone.utc)
     end_time = start_time + timedelta(minutes=int(body['duration']) * 30)
     end_time.astimezone(timezone.utc)
-    
+
     # print(f"Adding ticket for user {user_id}, plate {plate_id}, zone {zone_id}, payment method {body['payment_method_id']}, start time {start_time}, end time {end_time}, amount {body['amount']}")
-    return add_ticket(db, user_id, plate_id, zone_id, body['payment_method_id'], start_time, end_time, float(body['amount']))
+    return add_ticket(db, user_id, plate_id, zone_id, body['payment_method_id'], start_time, end_time,
+                      float(body['amount']))
+
 
 if __name__ == '__main__':
     app.run(port=5001)
