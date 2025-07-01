@@ -6,6 +6,7 @@ from firebase_admin import firestore, credentials, auth
 from firebase_admin.auth import UserNotFoundError
 from flask import Flask, abort, request
 from flask_cors import CORS, cross_origin
+from google.cloud.firestore_v1 import FieldFilter
 
 from common.enums import Role
 from services.payment_methods import get_user_payment_methods, delete_payment_method, add_payment_methods
@@ -55,7 +56,7 @@ def is_user_authenticated(user_id, token_id):
 
 
 def get_db_user_from_auth(firebase_user):
-    return db.collection("users").where("email", "==", firebase_user.email).get()[0].to_dict()
+    return db.collection("users").where(filter=FieldFilter("email", "==", firebase_user.email)).get()[0].to_dict()
 
 
 @app.route('/users/<user_id>/payment-methods', methods=['POST'])
@@ -265,10 +266,10 @@ def pay(user_id: str):
     if len(body['ticket_id']) > 0:
         return extend_ticket(db, body['ticket_id'], int(body['duration']), body['amount'])
 
-    zone_id = db.collection("zones").where("name", "==", body['zone']).get()[0].id
+    zone_id = db.collection("zones").where(filter=FieldFilter("name", "==", body['zone'])).get()[0].id
     if not zone_id:
         return abort(404, description="Zone not found")
-    plate_id = db.collection("plates").where("number", "==", body['plate']).where("user_id", "==", user_id).get()[0].id
+    plate_id = db.collection("plates").where(filter=FieldFilter("number", "==", body['plate'])).where(filter=FieldFilter("user_id", "==", user_id)).get()[0].id
     if not plate_id:
         return abort(404, description="Plate not found")
     

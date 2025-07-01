@@ -2,14 +2,14 @@ import uuid
 
 from firebase_admin import firestore
 from flask import abort
-
+from google.cloud.firestore_v1 import FieldFilter
 
 
 def get_payment_method(db, payment_method_id: str):
     return db.collection('payment-methods').document(payment_method_id).get().to_dict()
 
 def get_user_payment_methods(db, user_id: str):
-    user_payment_methods = db.collection('payment-methods').where("user_id", "==", user_id).get()
+    user_payment_methods = db.collection('payment-methods').where(filter=FieldFilter("user_id", "==", user_id)).get()
     return [{"name": i.to_dict()["name"], "id": i.id} for i in user_payment_methods]
 
 

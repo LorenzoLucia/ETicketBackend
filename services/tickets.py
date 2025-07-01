@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timedelta
 
 import pytz
+from google.cloud.firestore_v1 import FieldFilter
 
 from services.payment_methods import get_payment_method
 from services.plates import get_plate
@@ -9,7 +10,7 @@ from services.zones import get_zone
 
 
 def get_user_tickets(db, user_id: str):
-    user_tickets = db.collection('tickets').where("user_id", "==", user_id).get()
+    user_tickets = db.collection('tickets').where(filter=FieldFilter("user_id", "==", user_id)).get()
     tickets = []
     for i in user_tickets:
         id = i.id
