@@ -1,5 +1,6 @@
 from firebase_admin import firestore, auth
 from flask import abort
+from google.cloud.firestore_v1 import FieldFilter
 
 from common.enums import Role
 from models.user import User
@@ -30,7 +31,7 @@ def register_new_user(db, name, surname, email, birth_date):
 
 
 def get_myself(db, email: str):
-    result = db.collection("users").where("email", "==", email).get()
+    result = db.collection("users").where(filter=FieldFilter("email", "==", email)).get()
 
     if len(result) == 0:
         return {
