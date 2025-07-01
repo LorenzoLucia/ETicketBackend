@@ -270,13 +270,12 @@ def pay(user_id: str):
         return abort(404, description="Zone not found")
     plate_id = db.collection("plates").where("number", "==", body['plate']).where("user_id", "==", user_id).get()[0].id
     if not plate_id:
-        return abort(404, description="Plate not found")
-    
-    
+        add_user_plate(db, user_id, body['plate'])
+        plate_id = db.collection("plates").where("number", "==", body['plate']).where("user_id", "==", user_id).get()[0].id
 
-    start_time = datetime.now(timezone.utc)
+    start_time = datetime.now(timezone.tzname('Europe/Rome'))
     end_time = start_time + timedelta(minutes=int(body['duration']) * 30)
-    end_time.astimezone(timezone.utc)
+    end_time.astimezone(timezone.tzname('Europe/Rome'))
     
     # print(f"Adding ticket for user {user_id}, plate {plate_id}, zone {zone_id}, payment method {body['payment_method_id']}, start time {start_time}, end time {end_time}, amount {body['amount']}")
     return add_ticket(db, user_id, plate_id, zone_id, body['payment_method_id'], start_time, end_time, float(body['amount']))
