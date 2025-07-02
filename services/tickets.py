@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import pytz
 from google.cloud.firestore_v1 import FieldFilter
 
+from common.constants import TOTEM_USER_ID
 from services.payment_methods import get_payment_method
 from services.plates import get_plate
 from services.zones import get_zone
@@ -38,11 +39,10 @@ def get_user_tickets(db, user_id: str):
     return tickets
 
 
+# The last input parameter "card_name" is used only when it is a ticket bought on the totem, while payment_method_id will be None
 def add_ticket(db, user_id: str, plate_id: str, zone_id: str, payment_method_id: str, start_time, end_time,
-               price: float):
-    uuid4 = str(uuid.uuid4())
-    ticket_ref = db.collection("tickets").document(uuid4)
-    ticket_ref.set({
+               price: float, card_name):
+    new_ticket = {
         "user_id": user_id,
         "plate_id": plate_id,
         "zone_id": zone_id,
@@ -50,7 +50,15 @@ def add_ticket(db, user_id: str, plate_id: str, zone_id: str, payment_method_id:
         "start_time": start_time,
         "end_time": end_time,
         "price": str(price)
-    })
+    }
+
+    if user_id == TOTEM_USER_ID:
+        new_ticket["payment_method_id"] = None
+        new_ticket["payment_method"] = card_name
+
+    uuid4 = str(uuid.uuid4())
+    ticket_ref = db.collection("tickets").document(uuid4)
+    ticket_ref.set(new_ticket)
     return ticket_ref.get().to_dict()
 
 

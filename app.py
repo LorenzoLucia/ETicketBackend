@@ -9,6 +9,7 @@ from flask import Flask, abort, request
 from flask_cors import CORS, cross_origin
 from google.cloud.firestore_v1 import FieldFilter
 
+from common.constants import TOTEM_USER_ID
 from common.enums import Role
 from services.payment_methods import get_user_payment_methods, delete_payment_method, add_payment_methods
 from services.plates import get_user_plates, add_user_plate, delete_plate
@@ -129,7 +130,6 @@ def get_users():
     return get_all_users(db)
 
 
-
 @app.route('/users/<user_id>', methods=['PUT'])
 def edit_user(user_id: str):
     token_id = get_token(request.headers)
@@ -161,7 +161,7 @@ def add_user():
 
     body = request.json
 
-    return register_new_user(db, body["name"], body["surname"], body["email"], role=body["role"],)
+    return register_new_user(db, body["name"], body["surname"], body["email"], role=body["role"], )
 
 
 @app.route('/users/<user_id>', methods=['DELETE'])
@@ -250,7 +250,7 @@ def remove_zone(zone_id: str):
 #     user = get_db_user_from_auth(get_firebase_user(token_id))
 #     if user["role"] != Role.SYSTEM_ADMINISTRATOR.value and user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
 #         return abort(401)
-    
+
 #     body = request.json
 
 #     return edit_zone(db, zone_id, body["name"], body["price"])
@@ -276,6 +276,23 @@ def register_user():
     return register_new_user(db, body["name"], body["surname"], email, body['birthdate'])
 
 
+def pay_totem(totem_id, body):
+    zone_id = db.collection("zones").where(filter=FieldFilter("name", "==", body['zone'])).get()[0].id
+    if not zone_id:
+        return abort(404, description="Zone not found")
+
+    add_user_plate(db, totem_id, body["plate"])
+    plate_id = db.collection("plates").where(filter=FieldFilter("number", "==", body['plate'])).get()[0].id
+
+    start_time = datetime.now(timezone.tzname('Europe/Rome'))
+    end_time = start_time + timedelta(minutes=int(body['duration']) * 30)
+    end_time.astimezone(timezone.tzname('Europe/Rome'))
+
+    # print(f"Adding ticket for user {user_id}, plate {plate_id}, zone {zone_id}, payment method {body['payment_method_id']}, start time {start_time}, end time {end_time}, amount {body['amount']}")
+    return add_ticket(db, totem_id, plate_id, zone_id, body['payment_method_id'], start_time, end_time,
+                      float(body['amount']))
+
+
 @app.route('/users/<user_id>/pay', methods=['POST'])
 @cross_origin()
 def pay(user_id: str):
@@ -285,6 +302,10 @@ def pay(user_id: str):
         return abort(401)
 
     body = request.json
+    # If the request has been made by the totem call another function used only by the totem
+    if user_id == TOTEM_USER_ID:
+        return pay_totem(user_id, body)
+
     if len(body['ticket_id']) > 0:
         return extend_ticket(db, body['ticket_id'], int(body['duration']), body['amount'])
 
@@ -295,12 +316,13 @@ def pay(user_id: str):
         filter=FieldFilter("user_id", "==", user_id)).get()[0].id
     if not plate_id:
         add_user_plate(db, user_id, body['plate'])
-        plate_id = db.collection("plates").where("number", "==", body['plate']).where("user_id", "==", user_id).get()[0].id
+        plate_id = db.collection("plates").where("number", "==", body['plate']).where("user_id", "==", user_id).get()[
+            0].id
 
     start_time = datetime.now(timezone.tzname('Europe/Rome'))
     end_time = start_time + timedelta(minutes=int(body['duration']) * 30)
     end_time.astimezone(timezone.tzname('Europe/Rome'))
-    
+
     # print(f"Adding ticket for user {user_id}, plate {plate_id}, zone {zone_id}, payment method {body['payment_method_id']}, start time {start_time}, end time {end_time}, amount {body['amount']}")
     return add_ticket(db, user_id, plate_id, zone_id, body['payment_method_id'], start_time, end_time,
                       float(body['amount']))
