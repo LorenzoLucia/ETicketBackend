@@ -1,5 +1,6 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+from pytz import timezone
 
 import firebase_admin
 from dotenv import load_dotenv
@@ -319,9 +320,9 @@ def pay(user_id: str):
         plate_id = db.collection("plates").where("number", "==", body['plate']).where("user_id", "==", user_id).get()[
             0].id
 
-    start_time = datetime.now(timezone.tzname('Europe/Rome'))
-    end_time = start_time + timedelta(minutes=int(body['duration']) * 30)
-    end_time.astimezone(timezone.tzname('Europe/Rome'))
+    start_time = datetime.now(tz = timezone("Europe/Rome"))
+    end_time = start_time + timedelta(minutes=int(float(body['duration'])))
+    end_time.astimezone(timezone("Europe/Rome"))
 
     # print(f"Adding ticket for user {user_id}, plate {plate_id}, zone {zone_id}, payment method {body['payment_method_id']}, start time {start_time}, end time {end_time}, amount {body['amount']}")
     return add_ticket(db, user_id, plate_id, zone_id, body['payment_method_id'], start_time, end_time,
