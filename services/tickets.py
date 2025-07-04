@@ -10,6 +10,37 @@ from services.plates import get_plate
 from services.zones import get_zone
 
 
+def get_plate_tickets(db, number: str):
+    today = datetime.now(pytz.timezone("Europe/Rome")).date()
+    tickets = sorted(
+        [t for t in db.collection('tickets').get() if t.to_dict()["end_time"].date() == today],
+        key=lambda t: t.to_dict()["end_time"],
+        reverse=True
+    )
+    plate_tickets = []
+    for i in tickets:
+        id = i.id
+        i = i.to_dict()
+        plate = get_plate(db, i["plate_id"])
+        if plate["number"] != number or i['end_time'].date() < datetime.now(pytz.timezone("Europe/Rome")).date(): continue
+
+        zone = get_zone(db, i["zone_id"])
+
+        start_time = i["start_time"].astimezone(pytz.timezone("Europe/Rome")).strftime("%Y-%m-%d %H:%M:%S")
+        end_time = i["end_time"].astimezone(pytz.timezone("Europe/Rome")).strftime("%Y-%m-%d %H:%M:%S")
+        return {
+            "has_ticket": True,
+            "zone": zone,
+            "plate": plate,
+            "start_time": start_time,
+            "end_time": end_time,
+            "price": i["price"],
+            'id': id,
+        }
+    return {
+        "has_ticket": False,
+    }
+
 def get_user_tickets(db, user_id: str):
     user_tickets = db.collection('tickets').where(filter=FieldFilter("user_id", "==", user_id)).get()
     tickets = []
@@ -18,6 +49,16 @@ def get_user_tickets(db, user_id: str):
         i = i.to_dict()
         zone = get_zone(db, i["zone_id"])
         plate = get_plate(db, i["plate_id"])
+        if plate is None:
+            plate = {
+                "number": "N/A",
+                "id": i["plate_id"]
+            }
+        if zone is None:
+            zone = {
+                "name": "N/A",
+                "id": i["zone_id"]
+            }
         payment_method = get_payment_method(db, i["payment_method_id"])
 
         current_time = datetime.now(pytz.timezone("Europe/Rome"))
@@ -36,6 +77,7 @@ def get_user_tickets(db, user_id: str):
             'id': id,
             'is_active': is_active
         })
+    print(tickets)
     return tickets
 
 
@@ -77,3 +119,21 @@ def extend_ticket(db, ticket_id: str, duration: int, amount: float):
     })
 
     return ticket_ref.get().to_dict()
+
+
+def emit_fine(db, plate: str, cnt_id: str, reason: str, amount: float, timestamp: datetime):
+
+    fine_id = str(uuid.uuid4())
+    
+    fine_data = {
+        "plate": plate,
+        "cnt_id": cnt_id,
+        "reason": reason,
+        "amount": amount,
+        "timestamp": timestamp
+    }
+
+    fine_ref = db.collection("fines").document(fine_id)
+    fine_ref.set(fine_data)
+
+    return fine_ref.get().to_dict()

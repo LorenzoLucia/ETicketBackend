@@ -14,7 +14,7 @@ from common.constants import TOTEM_USER_ID
 from common.enums import Role
 from services.payment_methods import get_user_payment_methods, delete_payment_method, add_payment_methods
 from services.plates import get_user_plates, add_user_plate, delete_plate
-from services.tickets import get_user_tickets, add_ticket, extend_ticket
+from services.tickets import get_user_tickets, add_ticket, extend_ticket, get_plate_tickets, emit_fine
 from services.users import get_all_users, delete_user, register_new_user, get_myself
 from services.zones import get_all_zones, add_new_zone, delete_zone
 
@@ -258,6 +258,33 @@ def remove_zone(zone_id: str):
 #
 #
 
+@app.route('/tickets/<plate>', methods=['GET'])
+@cross_origin()
+def get_tickets_by_plate(plate: str):
+    token_id = get_token(request.headers)
+    user = get_db_user_from_auth(get_firebase_user(token_id))
+    if user["role"] != Role.CONTROLLER.value:
+        return abort(401)
+    
+    # plate_id = db.collection("plates").where(filter=FieldFilter("number", "==", plate)).get()[0].id
+
+    return get_plate_tickets(db, plate)
+
+@app.route('/fines/<user_id>/<plate>/emit-fine', methods=['POST'])
+@cross_origin()
+def emit_fine_route(user_id: str, plate: str):
+    token_id = get_token(request.headers)
+    user = get_db_user_from_auth(get_firebase_user(token_id))
+    if user["role"] != Role.CONTROLLER.value:
+        return abort(401)
+
+    body = request.json
+    plate = body.get("plate")
+    reason = body.get("reason")
+    amount = body.get("amount")
+    timestamp = datetime.now(timezone("Europe/Rome"))
+
+    return emit_fine(db, plate, user_id, reason, amount, timestamp)
 
 @app.route('/get-me', methods=['GET'])
 def get_me():
