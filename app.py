@@ -335,7 +335,7 @@ def pay(user_id: str):
         return pay_totem(user_id, body)
 
     if len(body['ticket_id']) > 0:
-        return extend_ticket(db, body['ticket_id'], int(body['duration']), body['amount'])
+        return extend_ticket(db, body['ticket_id'], float(body['duration']), body['amount'])
 
     zone_id = db.collection("zones").where(filter=FieldFilter("name", "==", body['zone'])).get()[0].id
     if not zone_id:

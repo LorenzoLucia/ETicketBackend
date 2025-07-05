@@ -104,14 +104,14 @@ def add_ticket(db, user_id: str, plate_id: str, zone_id: str, payment_method_id:
     return ticket_ref.get().to_dict()
 
 
-def extend_ticket(db, ticket_id: str, duration: int, amount: float):
+def extend_ticket(db, ticket_id: str, duration: float, amount: float):
     ticket_ref = db.collection("tickets").document(ticket_id)
     ticket = ticket_ref.get().to_dict()
 
     if not ticket:
         return None
 
-    new_end_time = ticket["end_time"] + timedelta(minutes=duration * 30)
+    new_end_time = ticket["end_time"] + timedelta(minutes=int(duration * 60))
 
     ticket_ref.update({
         "end_time": new_end_time,
