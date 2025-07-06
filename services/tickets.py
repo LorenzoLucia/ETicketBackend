@@ -18,6 +18,7 @@ def get_plate_tickets(db, number: str):
         reverse=True
     )
     plate_tickets = []
+    fine_issued = [t for t in db.collection('fines').where(filter=FieldFilter("plate", "==", number)).get() if t.to_dict()["timestamp"].date() == today]
     for i in tickets:
         id = i.id
         i = i.to_dict()
@@ -28,6 +29,7 @@ def get_plate_tickets(db, number: str):
 
         start_time = i["start_time"].astimezone(pytz.timezone("Europe/Rome")).strftime("%Y-%m-%d %H:%M:%S")
         end_time = i["end_time"].astimezone(pytz.timezone("Europe/Rome")).strftime("%Y-%m-%d %H:%M:%S")
+
         return {
             "has_ticket": True,
             "zone": zone,
@@ -36,9 +38,11 @@ def get_plate_tickets(db, number: str):
             "end_time": end_time,
             "price": i["price"],
             'id': id,
+            'fine_issued': len(fine_issued) > 0,
         }
     return {
         "has_ticket": False,
+        'fine_issued': len(fine_issued) > 0,
     }
 
 def get_user_tickets(db, user_id: str):
@@ -136,4 +140,4 @@ def emit_fine(db, plate: str, cnt_id: str, reason: str, amount: float, timestamp
     fine_ref = db.collection("fines").document(fine_id)
     fine_ref.set(fine_data)
 
-    return fine_ref.get().to_dict()
+    return 'True'

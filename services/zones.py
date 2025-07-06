@@ -31,4 +31,5 @@ def add_new_zone(db, name: str, hour_price: float):
 
 def delete_zone(db, zone_id: str):
     db.collection("zones").document(zone_id).delete()
+    return True
 
