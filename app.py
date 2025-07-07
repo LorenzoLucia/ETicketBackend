@@ -1,6 +1,5 @@
 import os
 from datetime import datetime, timedelta
-from pytz import timezone
 
 import firebase_admin
 from dotenv import load_dotenv
@@ -9,6 +8,7 @@ from firebase_admin.auth import UserNotFoundError
 from flask import Flask, abort, request
 from flask_cors import CORS, cross_origin
 from google.cloud.firestore_v1 import FieldFilter
+from pytz import timezone
 
 from common.constants import TOTEM_USER_ID
 from common.enums import Role
@@ -175,7 +175,7 @@ def remove_user(user_id: str):
         return abort(401)
 
     delete_user(db, user_id)
-    return True
+    return ""
 
 
 @app.route('/users/<user_id>/plates', methods=['GET'])
@@ -240,7 +240,7 @@ def remove_zone(zone_id: str):
         return abort(401)
 
     delete_zone(db, zone_id)
-    return True
+    return ""
 
 
 #
@@ -265,10 +265,11 @@ def get_tickets_by_plate(plate: str):
     user = get_db_user_from_auth(get_firebase_user(token_id))
     if user["role"] != Role.CONTROLLER.value:
         return abort(401)
-    
+
     # plate_id = db.collection("plates").where(filter=FieldFilter("number", "==", plate)).get()[0].id
 
     return get_plate_tickets(db, plate)
+
 
 @app.route('/fines/<user_id>/<plate>/emit-fine', methods=['POST'])
 @cross_origin()
@@ -285,6 +286,7 @@ def emit_fine_route(user_id: str, plate: str):
     timestamp = datetime.now(timezone("Europe/Rome"))
 
     return emit_fine(db, plate, user_id, reason, amount, timestamp)
+
 
 @app.route('/get-me', methods=['GET'])
 def get_me():
@@ -313,7 +315,7 @@ def pay_totem(totem_id, body):
     plate_id = db.collection("plates").where(filter=FieldFilter("number", "==", body['plate'])).get()[0].id
 
     start_time = datetime.now(timezone.tzname('Europe/Rome'))
-    end_time = start_time + timedelta(minutes=int(60*float(body['duration'])))
+    end_time = start_time + timedelta(minutes=int(60 * float(body['duration'])))
     end_time.astimezone(timezone.tzname('Europe/Rome'))
 
     # print(f"Adding ticket for user {user_id}, plate {plate_id}, zone {zone_id}, payment method {body['payment_method_id']}, start time {start_time}, end time {end_time}, amount {body['amount']}")
@@ -344,11 +346,12 @@ def pay(user_id: str):
         filter=FieldFilter("user_id", "==", user_id)).get()[0].id
     if not plate_id:
         add_user_plate(db, user_id, body['plate'])
-        plate_id = db.collection("plates").where("number", "==", body['plate']).where("user_id", "==", user_id).get()[
-            0].id
+        plate_id = db.collection("plates").where(
+            filter=FieldFilter("number", "==", body['plate'])).where(
+            filter=FieldFilter("user_id", "==", user_id)).get()[0].id
 
-    start_time = datetime.now(tz = timezone("Europe/Rome"))
-    end_time = start_time + timedelta(minutes=int(60*float(body['duration'])))
+    start_time = datetime.now(tz=timezone("Europe/Rome"))
+    end_time = start_time + timedelta(minutes=int(60 * float(body['duration'])))
     end_time.astimezone(timezone("Europe/Rome"))
 
     # print(f"Adding ticket for user {user_id}, plate {plate_id}, zone {zone_id}, payment method {body['payment_method_id']}, start time {start_time}, end time {end_time}, amount {body['amount']}")
