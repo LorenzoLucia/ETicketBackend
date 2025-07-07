@@ -18,12 +18,14 @@ def get_plate_tickets(db, number: str):
         reverse=True
     )
     plate_tickets = []
-    fine_issued = [t for t in db.collection('fines').where(filter=FieldFilter("plate", "==", number)).get() if t.to_dict()["timestamp"].date() == today]
+    fine_issued = [t for t in db.collection('fines').where(filter=FieldFilter("plate", "==", number)).get() if
+                   t.to_dict()["timestamp"].date() == today]
     for i in tickets:
         id = i.id
         i = i.to_dict()
         plate = get_plate(db, i["plate_id"])
-        if plate["number"] != number or i['end_time'].date() < datetime.now(pytz.timezone("Europe/Rome")).date(): continue
+        if plate["number"] != number or i['end_time'].date() < datetime.now(
+            pytz.timezone("Europe/Rome")).date(): continue
 
         zone = get_zone(db, i["zone_id"])
 
@@ -44,6 +46,7 @@ def get_plate_tickets(db, number: str):
         "has_ticket": False,
         'fine_issued': len(fine_issued) > 0,
     }
+
 
 def get_user_tickets(db, user_id: str):
     user_tickets = db.collection('tickets').where(filter=FieldFilter("user_id", "==", user_id)).get()
@@ -68,6 +71,9 @@ def get_user_tickets(db, user_id: str):
         current_time = datetime.now(pytz.timezone("Europe/Rome"))
         if (current_time - timedelta(days=30)) > i["end_time"]: continue
 
+        # Offset to add because Firestore return all the dates in UTC (even if we specified the timezone when saving the document)
+        timezone_offset = timedelta(hours=2)
+
         is_active = i["end_time"] > current_time
         # print(is_active)
         tickets.append({
@@ -75,8 +81,8 @@ def get_user_tickets(db, user_id: str):
             "plate": plate,
             "user_id": i["user_id"],
             "payment_method": payment_method,
-            "start_time": i["start_time"].strftime("%Y-%m-%d %H:%M:%S"),
-            "end_time": i["end_time"].strftime("%Y-%m-%d %H:%M:%S"),
+            "start_time": (i["start_time"] + timezone_offset).strftime("%Y-%m-%d %H:%M:%S"),
+            "end_time": (i["end_time"] + timezone_offset).strftime("%Y-%m-%d %H:%M:%S"),
             "price": i["price"],
             'id': id,
             'is_active': is_active
@@ -126,9 +132,8 @@ def extend_ticket(db, ticket_id: str, duration: float, amount: float):
 
 
 def emit_fine(db, plate: str, cnt_id: str, reason: str, amount: float, timestamp: datetime):
-
     fine_id = str(uuid.uuid4())
-    
+
     fine_data = {
         "plate": plate,
         "cnt_id": cnt_id,
