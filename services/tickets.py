@@ -131,18 +131,3 @@ def extend_ticket(db, ticket_id: str, duration: float, amount: float):
     return ticket_ref.get().to_dict()
 
 
-def emit_fine(db, plate: str, cnt_id: str, reason: str, amount: float, timestamp: datetime):
-    fine_id = str(uuid.uuid4())
-
-    fine_data = {
-        "plate": plate,
-        "cnt_id": cnt_id,
-        "reason": reason,
-        "amount": amount,
-        "timestamp": timestamp
-    }
-
-    fine_ref = db.collection("fines").document(fine_id)
-    fine_ref.set(fine_data)
-
-    return 'True'

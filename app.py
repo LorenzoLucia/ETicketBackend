@@ -14,10 +14,11 @@ from common.constants import TOTEM_USER_ID
 from common.enums import Role
 from services.payment_methods import get_user_payment_methods, delete_payment_method, add_payment_methods
 from services.plates import get_user_plates, add_user_plate, delete_plate
-from services.tickets import get_user_tickets, add_ticket, extend_ticket, get_plate_tickets, emit_fine
+from services.tickets import get_user_tickets, add_ticket, extend_ticket, get_plate_tickets
 from services.users import get_all_users, delete_user, register_new_user, get_myself
 from services.zones import get_all_zones, add_new_zone, delete_zone
 from services.chalk import chalk, remove_chalk, get_all_chalks
+from services.fines import emit_fine, get_fines, issue_fine
 
 load_dotenv()
 
@@ -326,6 +327,25 @@ def get_chalks(user_id: str):
 
     return get_all_chalks(db, user_id)
 
+@app.route('/fines', methods=['GET'])
+@cross_origin()
+def fetch_fines():
+    token_id = get_token(request.headers)
+    user = get_db_user_from_auth(get_firebase_user(token_id))
+    if user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
+        return abort(401)
+
+    return get_fines(db)
+
+@app.route('/fines/<fine_id>/issue', methods=['POST'])
+@cross_origin()
+def issue_fine_route(fine_id: str):
+    token_id = get_token(request.headers)
+    user = get_db_user_from_auth(get_firebase_user(token_id))
+    if user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
+        return abort(401)
+
+    return issue_fine(db, fine_id)
 
 @app.route('/get-me', methods=['GET'])
 def get_me():
