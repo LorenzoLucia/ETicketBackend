@@ -17,6 +17,7 @@ from services.plates import get_user_plates, add_user_plate, delete_plate
 from services.tickets import get_user_tickets, add_ticket, extend_ticket, get_plate_tickets, emit_fine
 from services.users import get_all_users, delete_user, register_new_user, get_myself
 from services.zones import get_all_zones, add_new_zone, delete_zone
+from services.chalk import chalk, remove_chalk, get_all_chalks
 
 load_dotenv()
 
@@ -287,6 +288,44 @@ def emit_fine_route(user_id: str, plate: str):
 
     return emit_fine(db, plate, user_id, reason, amount, timestamp)
 
+@app.route('/chalk/<user_id>/<plate>', methods=['POST'])
+@cross_origin()
+def add_chalk(user_id: str, plate: str):
+    token_id = get_token(request.headers)
+    if not is_user_authenticated(user_id, token_id):
+        return abort(401)
+
+    user = get_db_user_from_auth(get_firebase_user(token_id))
+    if user["role"] != Role.CONTROLLER.value:
+        return abort(401)
+
+    return chalk(db, user_id, plate)
+
+@app.route('/chalk/<user_id>/<plate>', methods=['DELETE'])
+def remove_chalk_route(user_id: str, plate: str):
+    token_id = get_token(request.headers)
+    if not is_user_authenticated(user_id, token_id):
+        return abort(401)
+
+    user = get_db_user_from_auth(get_firebase_user(token_id))
+    if user["role"] != Role.CONTROLLER.value:
+        return abort(401)
+
+    return remove_chalk(db, user_id, plate)
+
+@app.route('/chalk/<user_id>', methods=['GET'])
+@cross_origin()
+def get_chalks(user_id: str):
+    token_id = get_token(request.headers)
+    if not is_user_authenticated(user_id, token_id):
+        return abort(401)
+
+    user = get_db_user_from_auth(get_firebase_user(token_id))
+    if user["role"] != Role.CONTROLLER.value:
+        return abort(401)
+
+    return get_all_chalks(db, user_id)
+
 
 @app.route('/get-me', methods=['GET'])
 def get_me():
@@ -357,6 +396,8 @@ def pay(user_id: str):
     # print(f"Adding ticket for user {user_id}, plate {plate_id}, zone {zone_id}, payment method {body['payment_method_id']}, start time {start_time}, end time {end_time}, amount {body['amount']}")
     return add_ticket(db, user_id, plate_id, zone_id, body['payment_method_id'], start_time, end_time,
                       float(body['amount']))
+
+
 
 
 if __name__ == '__main__':
