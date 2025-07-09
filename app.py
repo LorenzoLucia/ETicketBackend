@@ -373,9 +373,9 @@ def pay_totem(totem_id, body):
     add_user_plate(db, totem_id, body["plate"])
     plate_id = db.collection("plates").where(filter=FieldFilter("number", "==", body['plate'])).get()[0].id
 
-    start_time = datetime.now(timezone.tzname('Europe/Rome'))
+    start_time = datetime.now(timezone('Europe/Rome'))
     end_time = start_time + timedelta(minutes=int(60 * float(body['duration'])))
-    end_time.astimezone(timezone.tzname('Europe/Rome'))
+    end_time.astimezone(timezone('Europe/Rome'))
 
     # print(f"Adding ticket for user {user_id}, plate {plate_id}, zone {zone_id}, payment method {body['payment_method_id']}, start time {start_time}, end time {end_time}, amount {body['amount']}")
     return add_ticket(db, totem_id, plate_id, zone_id, body['payment_method_id'], start_time, end_time,
