@@ -111,7 +111,11 @@ def add_ticket(db, user_id: str, plate_id: str, zone_id: str, payment_method_id:
     uuid4 = str(uuid.uuid4())
     ticket_ref = db.collection("tickets").document(uuid4)
     ticket_ref.set(new_ticket)
-    return ticket_ref.get().to_dict()
+    
+    if user_id == TOTEM_USER_ID:
+        return dict(ticket_ref.get().to_dict(), ticket_id=uuid4)
+    else:
+        return ticket_ref.get().to_dict()
 
 
 def extend_ticket(db, ticket_id: str, duration: float, amount: float):
