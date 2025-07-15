@@ -1,5 +1,8 @@
+import os
 import uuid
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+from github import Github
 
 import pytz
 from google.cloud.firestore_v1 import FieldFilter
@@ -8,6 +11,9 @@ from common.constants import TOTEM_USER_ID
 from services.payment_methods import get_payment_method
 from services.plates import get_plate
 from services.zones import get_zone
+
+load_dotenv()
+firestore_account_path = os.getenv('FIRESTORE_ACCOUNT_PATH')
 
 
 def get_plate_tickets(db, number: str):
@@ -135,3 +141,59 @@ def extend_ticket(db, ticket_id: str, duration: float, amount: float):
     return ticket_ref.get().to_dict()
 
 
+def compile_ticket_svg(db, ticket_id: str, start_time: str, end_time: str, duration: str, zone: str, amount: str):
+
+    dir_path = os.path.dirname(os.path.dirname(__file__))
+    with open(f"{dir_path}/common/ticket_template_card.svg", "r") as f:
+        template = f.readlines()
+
+    ticket_svg = list()
+    for line in template:
+        new_line = line.replace("start_time", start_time)
+        new_line = line.replace("end_time", end_time)
+        new_line = line.replace("duration_time", duration)
+        new_line = line.replace("ticket_zone", zone) 
+        new_line = line.replace("ticket_amount", amount)
+
+        ticket_svg.append(new_line)
+
+    access_token = os.getenv('GITHUB_ACCESS_TOKEN')
+    github_repo = os.getenv('GITHUB_REPO')
+    git_branch = "main"
+    git_file_svg = f"ticket_files/{ticket_id}.svg"
+    
+    try:
+        g = Github(access_token)
+        repo = g.get_user().get_repo(github_repo)
+        print("success")
+    except Exception as e:
+        print(e)
+
+    git_files = []
+    contents = repo.get_contents("")
+
+    while contents:
+        file_content = contents.pop(0)
+        if file_content.type == "dir":
+            contents.extend(repo.get_contents(file_content.path))
+        else:
+            file = file_content
+            git_files.append(str(file).replace('ContentFile(path="', '').replace('")', ''))
+    
+    print(contents)
+
+    # Upload to github or create new file
+    if git_file_svg in git_files:
+        contents = repo.get_contents(git_file_svg)
+        repo.update_file(contents.path, "committ ticket_svg", ticket_svg, contents.sha, branch=git_branch)
+    else:
+        repo.create_file(git_file_svg, "committ ticket_svg", ticket_svg, branch=git_branch)
+
+
+    ticket_ref = db.collection("tickets").document(ticket_id)
+    ticket_svg_url = f"https://raw.githubusercontent.com/LorenzoLucia/ETicketTotem/refs/heads/main/ticket_files/{ticket_id}.svg"
+    ticket_ref.update({
+        "ticket_svg_url": ticket_svg_url,
+    })
+
+    return ticket_ref.get().to_dict()

@@ -14,7 +14,7 @@ from common.constants import TOTEM_USER_ID
 from common.enums import Role
 from services.payment_methods import get_user_payment_methods, delete_payment_method, add_payment_methods
 from services.plates import get_user_plates, add_user_plate, delete_plate
-from services.tickets import get_user_tickets, add_ticket, extend_ticket, get_plate_tickets
+from services.tickets import get_user_tickets, add_ticket, extend_ticket, get_plate_tickets, compile_ticket_svg
 from services.users import get_all_users, delete_user, register_new_user, get_myself
 from services.zones import get_all_zones, add_new_zone, delete_zone
 from services.chalk import chalk, remove_chalk, get_all_chalks
@@ -347,12 +347,24 @@ def issue_fine_route(fine_id: str):
 
     return issue_fine(db, fine_id)
 
+
 @app.route('/get-me', methods=['GET'])
 def get_me():
     token_id = get_token(request.headers)
     firebase_user = get_firebase_user(token_id)
     email = firebase_user.email
     return get_myself(db, email)
+
+
+@app.route('/tickets/<ticket_id>/create_ticket_svg', methods=['POST'])
+@cross_origin()
+def create_ticket_svg(ticket_id: str):
+    body = request.json
+
+    token_id = get_token(request.headers)
+    _ = get_firebase_user(token_id)
+
+    return compile_ticket_svg(db, ticket_id, body["start_time"], body["end_time"], body["duration"], body["zone"], body["amount"])
 
 
 @app.route('/register', methods=['POST'])
