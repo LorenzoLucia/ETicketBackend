@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from github import Github
+from github import Auth
 
 import pytz
 from google.cloud.firestore_v1 import FieldFilter
@@ -117,7 +118,7 @@ def add_ticket(db, user_id: str, plate_id: str, zone_id: str, payment_method_id:
     uuid4 = str(uuid.uuid4())
     ticket_ref = db.collection("tickets").document(uuid4)
     ticket_ref.set(new_ticket)
-    
+
     if user_id == TOTEM_USER_ID:
         return dict(ticket_ref.get().to_dict(), ticket_id=uuid4)
     else:
@@ -145,17 +146,13 @@ def compile_ticket_svg(db, ticket_id: str, start_time: str, end_time: str, durat
 
     dir_path = os.path.dirname(os.path.dirname(__file__))
     with open(f"{dir_path}/common/ticket_template_card.svg", "r") as f:
-        template = f.readlines()
-
-    ticket_svg = list()
-    for line in template:
-        new_line = line.replace("start_time", start_time)
-        new_line = line.replace("end_time", end_time)
-        new_line = line.replace("duration_time", duration)
-        new_line = line.replace("ticket_zone", zone) 
-        new_line = line.replace("ticket_amount", amount)
-
-        ticket_svg.append(new_line)
+        template = f.read()
+        
+    ticket_svg = template.replace("start_time", start_time.rstrip("GMT"))
+    ticket_svg = ticket_svg.replace("end_time", end_time)
+    ticket_svg = ticket_svg.replace("duration_time", duration)
+    ticket_svg = ticket_svg.replace("ticket_zone", zone) 
+    ticket_svg = ticket_svg.replace("ticket_amount", amount)
 
     access_token = os.getenv('GITHUB_ACCESS_TOKEN')
     github_repo = os.getenv('GITHUB_REPO')
@@ -163,31 +160,37 @@ def compile_ticket_svg(db, ticket_id: str, start_time: str, end_time: str, durat
     git_file_svg = f"ticket_files/{ticket_id}.svg"
     
     try:
-        g = Github(access_token)
-        repo = g.get_user().get_repo(github_repo)
-        print("success")
+        # Authentication
+        auth = Auth.Token(access_token)
+        # Public Web Github
+        g = Github(auth=auth)
+        for repo in g.get_user().get_repos():
+            if github_repo in repo.full_name:
+                totem_repo = repo
+        # print("success getting repo")
     except Exception as e:
         print(e)
 
     git_files = []
-    contents = repo.get_contents("")
+    contents = totem_repo.get_contents("ticket_files")
 
     while contents:
         file_content = contents.pop(0)
         if file_content.type == "dir":
-            contents.extend(repo.get_contents(file_content.path))
+            contents.extend(totem_repo.get_contents(file_content.path))
         else:
             file = file_content
             git_files.append(str(file).replace('ContentFile(path="', '').replace('")', ''))
-    
-    print(contents)
 
     # Upload to github or create new file
     if git_file_svg in git_files:
-        contents = repo.get_contents(git_file_svg)
-        repo.update_file(contents.path, "committ ticket_svg", ticket_svg, contents.sha, branch=git_branch)
+        contents = totem_repo.get_contents(git_file_svg)
+        totem_repo.update_file(contents.path, "committ ticket_svg", ticket_svg, contents.sha, branch=git_branch)
     else:
-        repo.create_file(git_file_svg, "committ ticket_svg", ticket_svg, branch=git_branch)
+        # print("file non trovato")
+        totem_repo.create_file(git_file_svg, "committ ticket_svg", ticket_svg, git_branch)
+
+    g.close()
 
 
     ticket_ref = db.collection("tickets").document(ticket_id)
