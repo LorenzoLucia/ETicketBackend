@@ -176,7 +176,7 @@ def remove_user(user_id: str):
     if user["role"] != Role.SYSTEM_ADMINISTRATOR.value and user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
         return abort(401)
 
-    delete_user(db, user_id)
+    delete_user(db, user_id, user["role"])
     return ""
 
 

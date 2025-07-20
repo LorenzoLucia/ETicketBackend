@@ -18,12 +18,12 @@ def get_all_users(db):
     return users_dicts
 
 
-def delete_user(db, user_id: str):
+def delete_user(db, user_id: str, admin_role: Role):
     user_to_delete_ref = db.collection("users").document(user_id)
     user_to_delete = user_to_delete_ref.get().to_dict()
     # You cannot delete via APIs SYSTEM and SERVICE ADMINISTRATORS
-    if user_to_delete["role"] == Role.SYSTEM_ADMINISTRATOR.value or user_to_delete[
-        "role"] == Role.CUSTOMER_ADMINISTRATOR.value:
+    if admin_role == Role.CUSTOMER_ADMINISTRATOR and (user_to_delete["role"] == Role.SYSTEM_ADMINISTRATOR.value or user_to_delete[
+        "role"] == Role.CUSTOMER_ADMINISTRATOR.value):
         abort(401)
 
     user_to_delete_ref.delete()
