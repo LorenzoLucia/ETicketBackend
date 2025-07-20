@@ -94,7 +94,7 @@ def get_user_tickets(db, user_id: str):
             'id': id,
             'is_active': is_active
         })
-    print(tickets)
+    # print(tickets)
     return tickets
 
 
@@ -121,10 +121,7 @@ def add_ticket(db, user_id: str, plate_id: str, zone: str,  zone_id: str, paymen
 
     compile_ticket_svg(db, uuid4, start_time, end_time, duration, zone, price)
 
-    if user_id == TOTEM_USER_ID:
-        return dict(ticket_ref.get().to_dict(), ticket_id=uuid4)
-    else:
-        return ticket_ref.get().to_dict()
+    return dict(ticket_ref.get().to_dict(), ticket_id=uuid4)
 
 
 def extend_ticket(db, ticket_id: str, duration: float, amount: float):
