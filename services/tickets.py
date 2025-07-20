@@ -99,8 +99,8 @@ def get_user_tickets(db, user_id: str):
 
 
 # The last input parameter "card_name" is used only when it is a ticket bought on the totem, while payment_method_id will be None
-def add_ticket(db, user_id: str, plate_id: str, zone_id: str, payment_method_id: str, start_time, end_time,
-               price: float, card_name=None):
+def add_ticket(db, user_id: str, plate_id: str, zone: str,  zone_id: str, payment_method_id: str, start_time, end_time,
+               duration: float, price: float, card_name=None):
     new_ticket = {
         "user_id": user_id,
         "plate_id": plate_id,
@@ -118,6 +118,8 @@ def add_ticket(db, user_id: str, plate_id: str, zone_id: str, payment_method_id:
     uuid4 = str(uuid.uuid4())
     ticket_ref = db.collection("tickets").document(uuid4)
     ticket_ref.set(new_ticket)
+
+    compile_ticket_svg(db, uuid4, start_time, end_time, duration, zone, price)
 
     if user_id == TOTEM_USER_ID:
         return dict(ticket_ref.get().to_dict(), ticket_id=uuid4)
@@ -141,18 +143,30 @@ def extend_ticket(db, ticket_id: str, duration: float, amount: float):
 
     return ticket_ref.get().to_dict()
 
-# All the strings have to be already formatted properly
-def compile_ticket_svg(db, ticket_id: str, start_time: str, end_time: str, duration: str, zone: str, amount: str):
+def compile_ticket_svg(db, ticket_id: str, start_time, end_time, duration, zone: str, amount):
+    # Format all strings properly
+    amount_str = f"{amount:.2f} €"
+
+    minutes = int(duration * 60)
+    hours_str = f"{int(duration):0>2}"
+    minutes_str = f"{(minutes % 60):0>2}"
+
+    duration_str = f"{hours_str}:{minutes_str} h"
+    print(duration_str)
+
+    start_time_str = start_time.strftime("%d-%m-%Y %H:%M")
+    end_time_str = end_time.strftime("%d-%m-%Y %H:%M")
+
     # Compile the ticket template
     dir_path = os.path.dirname(os.path.dirname(__file__))
     with open(f"{dir_path}/common/ticket_template_card.svg", "r") as f:
         template = f.read()
         
-    ticket_svg = template.replace("start_time", start_time.rstrip("GMT"))
-    ticket_svg = ticket_svg.replace("end_time", end_time)
-    ticket_svg = ticket_svg.replace("duration_time", duration)
+    ticket_svg = template.replace("start_time", start_time_str)
+    ticket_svg = ticket_svg.replace("end_time", end_time_str)
+    ticket_svg = ticket_svg.replace("duration_time", duration_str)
     ticket_svg = ticket_svg.replace("ticket_zone", zone) 
-    ticket_svg = ticket_svg.replace("ticket_amount", amount)
+    ticket_svg = ticket_svg.replace("ticket_amount", amount_str)
 
 
     access_token = os.getenv('GITHUB_ACCESS_TOKEN')
