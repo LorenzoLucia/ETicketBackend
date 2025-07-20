@@ -143,8 +143,8 @@ def edit_user(user_id: str):
     if user["role"] != Role.SYSTEM_ADMINISTRATOR.value and user["role"] != Role.CUSTOMER_ADMINISTRATOR.value:
         return abort(401)
     # You cannot edit via APIs SYSTEM and SERVICE ADMINISTRATORS
-    if user_to_edit["role"] == Role.SYSTEM_ADMINISTRATOR.value or user_to_edit[
-        "role"] == Role.CUSTOMER_ADMINISTRATOR.value:
+    if user['role'] == Role.CUSTOMER_ADMINISTRATOR and (user_to_edit["role"] == Role.SYSTEM_ADMINISTRATOR.value or user_to_edit[
+        "role"] == Role.CUSTOMER_ADMINISTRATOR.value):
         abort(401)
 
     body = request.json

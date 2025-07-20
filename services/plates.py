@@ -1,6 +1,7 @@
 import uuid
 
 from google.cloud.firestore_v1 import FieldFilter
+from flask import abort
 
 
 def get_plate(db, plate_id: str):
@@ -15,6 +16,9 @@ def get_user_plates(db, user_id: str):
 
 
 def add_user_plate(db, user_id: str, number: str):
+    if len(db.collection('plates').where(filter=FieldFilter("number", "==", number)).where(
+            filter=FieldFilter("user_id", "==", user_id)).get()) > 0:
+        return abort(400, "Plate already exists")
     uuid4 = str(uuid.uuid4())
     db.collection('plates').document(uuid4).set({
         "user_id": user_id,
