@@ -138,7 +138,11 @@ def extend_ticket(db, ticket_id: str, duration: float, amount: float):
         "price": str(float(ticket["price"]) + float(amount))
     })
 
-    return ticket_ref.get().to_dict()
+    response = ticket_ref.get().to_dict()
+    response['end_time'] = response['end_time'].astimezone(pytz.timezone("Europe/Rome")).strftime("%Y-%m-%d %H:%M:%S")
+    response['success'] = True
+
+    return response
 
 def compile_ticket_svg(db, ticket_id: str, start_time, end_time, duration, zone: str, amount):
     # Format all strings properly

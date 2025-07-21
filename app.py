@@ -214,9 +214,9 @@ def remove_plate(user_id: str, number: str):
 
 @app.route('/zones', methods=['GET'])
 def get_zones():
-    token_id = get_token(request.headers)
+    # token_id = get_token(request.headers)
     # This line is only needed to check that the user is authenticated
-    _ = get_firebase_user(token_id)
+    # _ = get_firebase_user(token_id)
     return get_all_zones(db, )
 
 
@@ -367,6 +367,20 @@ def create_ticket_svg(ticket_id: str):
     return compile_ticket_svg(db, ticket_id, body["start_time"], body["end_time"], body["duration"], body["zone"], body["amount"])
 
 
+@app.route('/get-ticket/<ticket_id>', methods=['GET'])
+@cross_origin()
+def get_ticket(ticket_id: str):
+    ticket = db.collection("tickets").document(ticket_id).get()
+    response = ticket.to_dict()
+    if not ticket.exists or response['end_time'] < datetime.now(timezone('Europe/Rome')):
+        return abort(404, description="Ticket not found")
+
+    response['start_time'] = response['start_time'].astimezone(timezone('Europe/Rome')).strftime("%Y-%m-%d %H:%M:%S")
+    response['end_time'] = response['end_time'].astimezone(timezone('Europe/Rome')).strftime("%Y-%m-%d %H:%M:%S")
+    response['zone'] = db.collection("zones").document(response['zone_id']).get().to_dict()['name']
+
+    return response
+
 @app.route('/register', methods=['POST'])
 @cross_origin()
 def register_user():
@@ -429,7 +443,18 @@ def pay(user_id: str):
     return add_ticket(db, user_id, plate_id, body['zone'], zone_id, body['payment_method_id'], start_time, end_time, float(body['duration']), 
                       float(body['amount']))
 
+@app.route('/pay-no-login/<ticket_id>', methods=['POST'])
+@cross_origin()
+def pay_ticket_no_login(ticket_id: str):
+    body = request.json
 
+    # Get the ticket from the database
+    ticket = db.collection("tickets").document(ticket_id).get()
+    if ticket is None:
+        return abort(404, description="Ticket not found")
+
+    # Extend the ticket
+    return extend_ticket(db, ticket_id, float(body['duration']), body['amount'])
 
 
 if __name__ == '__main__':
