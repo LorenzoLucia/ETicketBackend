@@ -12,7 +12,7 @@ from pytz import timezone
 
 from common.constants import TOTEM_USER_ID
 from common.enums import Role
-from services.payment_methods import get_user_payment_methods, delete_payment_method, add_payment_methods
+from services.payment_methods import get_payment_method, get_user_payment_methods, delete_payment_method, add_payment_methods
 from services.plates import get_user_plates, add_user_plate, delete_plate
 from services.tickets import get_user_tickets, add_ticket, extend_ticket, get_plate_tickets, compile_ticket_svg
 from services.users import get_all_users, delete_user, register_new_user, get_myself
@@ -417,6 +417,11 @@ def pay(user_id: str):
         return abort(401)
 
     body = request.json
+
+    card_number = get_payment_method(db, body['payment_method_id'])["card_number"] if body['payment_method_id'] else None
+    if card_number is not None and card_number == '1111 1111 1111 1111':
+        abort(400, "Failed payment")
+
     # If the request has been made by the totem call another function used only by the totem
     if user_id == TOTEM_USER_ID:
         return pay_totem(user_id, body)
@@ -458,4 +463,5 @@ def pay_ticket_no_login(ticket_id: str):
 
 
 if __name__ == '__main__':
+    # app.run(host='0.0.0.0', port=5001)
     app.run(host='0.0.0.0', port=5001)

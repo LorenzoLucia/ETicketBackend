@@ -101,6 +101,7 @@ def get_user_tickets(db, user_id: str):
 # The last input parameter "card_name" is used only when it is a ticket bought on the totem, while payment_method_id will be None
 def add_ticket(db, user_id: str, plate_id: str, zone: str,  zone_id: str, payment_method_id: str, start_time, end_time,
                duration: float, price: float, card_name=None):
+
     new_ticket = {
         "user_id": user_id,
         "plate_id": plate_id,
