@@ -64,6 +64,6 @@
   <!-- EXTEND THE TICKET button with material design styling -->
   <rect x="55" y="300" width="180" height="30" fill="#673AB7" rx="4" ry="4" filter="url(#innershadow)"/>
   <text x="145" y="320" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="14" font-weight="600" letter-spacing="0.5px">
-    <a href="https://172.20.10.2/#/extend">EXTEND THE TICKET</a>
+    <a href="http://172.20.10.6:8082/#/extend/ticket_id">EXTEND THE TICKET</a>
   </text>
 </svg>

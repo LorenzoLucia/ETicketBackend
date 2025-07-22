@@ -154,7 +154,7 @@ def compile_ticket_svg(db, ticket_id: str, start_time, end_time, duration, zone:
     minutes_str = f"{(minutes % 60):0>2}"
 
     duration_str = f"{hours_str}:{minutes_str} h"
-    print(duration_str)
+    # print(duration_str)
 
     start_time_str = start_time.strftime("%d-%m-%Y %H:%M")
     end_time_str = end_time.strftime("%d-%m-%Y %H:%M")
@@ -169,6 +169,7 @@ def compile_ticket_svg(db, ticket_id: str, start_time, end_time, duration, zone:
     ticket_svg = ticket_svg.replace("duration_time", duration_str)
     ticket_svg = ticket_svg.replace("ticket_zone", zone) 
     ticket_svg = ticket_svg.replace("ticket_amount", amount_str)
+    ticket_svg = ticket_svg.replace("ticket_id", ticket_id)
 
 
     access_token = os.getenv('GITHUB_ACCESS_TOKEN')
