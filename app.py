@@ -418,9 +418,10 @@ def pay(user_id: str):
 
     body = request.json
 
-    card_number = get_payment_method(db, body['payment_method_id'])["card_number"] if body['payment_method_id'] else None
-    if card_number is not None and card_number == '1111 1111 1111 1111':
-        abort(400, "Failed payment")
+    if user_id != TOTEM_USER_ID:
+        card_number = get_payment_method(db, body['payment_method_id'])["card_number"] if body['payment_method_id'] else None
+        if card_number is not None and card_number == '1111 1111 1111 1111':
+            abort(400, "Failed payment")
 
     # If the request has been made by the totem call another function used only by the totem
     if user_id == TOTEM_USER_ID:
