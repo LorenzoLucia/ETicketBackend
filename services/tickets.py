@@ -133,11 +133,17 @@ def extend_ticket(db, ticket_id: str, duration: float, amount: float):
         return None
 
     new_end_time = ticket["end_time"] + timedelta(minutes=int(duration * 60))
+    new_duration = float(((new_end_time - ticket["start_time"]).total_seconds())/3600)
 
     ticket_ref.update({
         "end_time": new_end_time,
         "price": str(float(ticket["price"]) + float(amount))
     })
+
+    zone = get_zone(db, ticket["zone_id"])["name"]
+
+    # print(db, ticket_id, ticket["start_time"], new_end_time, new_duration, zone, float(ticket["price"]) + float(amount))
+    compile_ticket_svg(db, ticket_id, ticket["start_time"], new_end_time, new_duration, zone, float(ticket["price"]) + float(amount))
 
     response = ticket_ref.get().to_dict()
     response['end_time'] = response['end_time'].astimezone(pytz.timezone("Europe/Rome")).strftime("%Y-%m-%d %H:%M:%S")
@@ -146,6 +152,7 @@ def extend_ticket(db, ticket_id: str, duration: float, amount: float):
     return response
 
 def compile_ticket_svg(db, ticket_id: str, start_time, end_time, duration, zone: str, amount):
+    # print(db, ticket_id, start_time, end_time, duration, zone, amount)
     # Format all strings properly
     amount_str = f"{amount:.2f} €"
 
@@ -156,8 +163,8 @@ def compile_ticket_svg(db, ticket_id: str, start_time, end_time, duration, zone:
     duration_str = f"{hours_str}:{minutes_str} h"
     # print(duration_str)
 
-    start_time_str = start_time.strftime("%d-%m-%Y %H:%M")
-    end_time_str = end_time.strftime("%d-%m-%Y %H:%M")
+    start_time_str = start_time.astimezone(pytz.timezone("Europe/Rome")).strftime("%d-%m-%Y %H:%M")
+    end_time_str = end_time.astimezone(pytz.timezone("Europe/Rome")).strftime("%d-%m-%Y %H:%M")
 
     # Compile the ticket template
     dir_path = os.path.dirname(os.path.dirname(__file__))
